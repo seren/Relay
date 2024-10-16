@@ -8,7 +8,7 @@ import {
 } from "obsidian";
 import { SharedFolder, SharedFolders } from "../SharedFolder";
 import type { ConnectionState } from "src/HasProvider";
-import type { Document } from "src/Document";
+import { Document } from "src/Document";
 import Pill from "src/components/Pill.svelte";
 import TextPill from "src/components/TextPill.svelte";
 import { withFlag } from "src/flagManager";
@@ -229,9 +229,11 @@ class FilePillVisitor extends BaseVisitor<FilePillDecoration> {
 		sharedFolder?: SharedFolder,
 	): FilePillDecoration | null {
 		if (sharedFolder) {
-			const guid = sharedFolder.ids.get(sharedFolder.getVirtualPath(file.path));
-			if (!guid) return null;
-			return storage || new FilePillDecoration(item.selfEl, guid);
+			const meta = sharedFolder.syncStore.get(
+				sharedFolder.getVirtualPath(file.path),
+			);
+			if (!meta) return null;
+			return storage || new FilePillDecoration(item.selfEl, meta.id);
 		}
 		if (storage) {
 			storage.destroy();
@@ -288,11 +290,12 @@ class FileStatusVisitor extends BaseVisitor<DocumentStatus> {
 	): DocumentStatus | null {
 		if (sharedFolder) {
 			try {
-				const guid = sharedFolder.ids.get(
+				const meta = sharedFolder.syncStore.get(
 					sharedFolder.getVirtualPath(file.path),
 				);
-				if (!guid) return null;
-				const document = sharedFolder.docs.get(guid);
+				if (!meta) return null;
+				const document = sharedFolder.docs.get(meta.id);
+				if (!(document instanceof Document)) return null;
 				if (!document) return null;
 				return storage || new DocumentStatus(item.el, document, file);
 			} catch (e) {
